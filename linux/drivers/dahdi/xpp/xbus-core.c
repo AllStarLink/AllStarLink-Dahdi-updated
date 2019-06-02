@@ -244,7 +244,7 @@ int refcount_xbus(xbus_t *xbus)
 {
 	struct kref *kref = &xbus->kref;
 
-	return atomic_read(&kref->refcount);
+	return refcount_read(&kref->refcount);
 }
 
 /*------------------------- Frame  Handling ------------------------*/
@@ -1304,6 +1304,40 @@ err:
 	return 0;
 }
 
+#ifndef init_timer
+static void xbus_command_timer(struct timer_list *t)
+{
+	xbus_t *xbus = from_timer(xbus, t, command_timer);
+#else
+static void xbus_command_timer(unsigned long param)
+{
+	xbus_t *xbus = (xbus_t *)param;
+#endif
+	struct timeval now;
+
+	BUG_ON(!xbus);
+	do_gettimeofday(&now);
+	xbus_command_queue_tick(xbus);
+	if (!xbus->self_ticking) /* Must be 1KHz rate */
+		mod_timer(&xbus->command_timer, jiffies + 1);
+}
+
+void xbus_set_command_timer(xbus_t *xbus, bool on)
+{
+	XBUS_DBG(SYNC, xbus, "%s\n", (on) ? "ON" : "OFF");
+	if (on) {
+		if (!timer_pending(&xbus->command_timer)) {
+			XBUS_DBG(SYNC, xbus, "add_timer\n");
+			xbus->command_timer.expires = jiffies + 1;
+			add_timer(&xbus->command_timer);
+		}
+	} else if (timer_pending(&xbus->command_timer)) {
+		XBUS_DBG(SYNC, xbus, "del_timer\n");
+		del_timer(&xbus->command_timer);
+	}
+	xbus->self_ticking = !on;
+}
+
 bool xbus_setflags(xbus_t *xbus, int flagbit, bool on)
 {
 	unsigned long flags;
@@ -1566,7 +1600,10 @@ xbus_t *xbus_new(struct xbus_ops *ops, ushort max_send_size,
 	transport_init(xbus, ops, max_send_size, transport_device, priv);
 	spin_lock_init(&xbus->lock);
 	init_waitqueue_head(&xbus->command_queue_empty);
-	init_timer(&xbus->command_timer);
+	timer_setup(&xbus->command_timer, xbus_command_timer, 0);
+#ifdef init_timer
+	xbus->command_timer.data = (unsigned long)xbus;
+#endif
 	atomic_set(&xbus->pcm_rx_counter, 0);
 	xbus->min_tx_sync = INT_MAX;
 	xbus->min_rx_sync = INT_MAX;

@@ -60,6 +60,12 @@
 
 #define dahdi_pci_module pci_register_driver
 
+#if 0
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/signal.h>
+#endif /* 4.11.0 */
+#endif
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,19)
 #define DAHDI_IRQ_HANDLER(a) static irqreturn_t a(int irq, void *dev_id)
 #else
@@ -543,6 +549,9 @@ struct dahdi_chan {
 	short	getlin[DAHDI_MAX_CHUNKSIZE];			/*!< Last transmitted samples */
 	unsigned char getraw[DAHDI_MAX_CHUNKSIZE];		/*!< Last received raw data */
 	short	putlin[DAHDI_MAX_CHUNKSIZE];			/*!< Last received samples */
+#ifndef	OLD_BROKEN_CODE
+        short   putlin_pseudo[DAHDI_MAX_CHUNKSIZE];                /* Last received samples -- pseudo channel */
+#endif
 	unsigned char putraw[DAHDI_MAX_CHUNKSIZE];		/*!< Last received raw data */
 	short	conflast[DAHDI_MAX_CHUNKSIZE];			/*!< Last conference sample -- base part of channel */
 	short	conflast1[DAHDI_MAX_CHUNKSIZE];		/*!< Last conference sample  -- pseudo part of channel */
@@ -1404,6 +1413,8 @@ static inline short dahdi_txtone_nextsample(struct dahdi_chan *ss)
 /*! Maximum audio mask */
 #define DAHDI_FORMAT_AUDIO_MASK	((1 << 16) - 1)
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0)
+#define refcount_read atomic_read
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 16, 0)
 
 /* DAHDI only was using the xxx_clear_bit variants. */
@@ -1533,6 +1544,7 @@ static inline int strcasecmp(const char *s1, const char *s2)
 #endif /* 2.6.31 */
 #endif /* 3.10.0 */
 #endif /* 3.16.0 */
+#endif /* 4.11.0 */
 
 #ifndef DEFINE_SPINLOCK
 #define DEFINE_SPINLOCK(x)      spinlock_t x = SPIN_LOCK_UNLOCKED

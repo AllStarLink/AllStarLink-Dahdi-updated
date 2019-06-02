@@ -174,7 +174,8 @@ struct phonedev {
 struct xpd {
 	char xpdname[XPD_NAMELEN];
 	struct phonedev phonedev;
-
+	struct unit_descriptor unit_descriptor;
+#define	XPD_HW(xpd)	((xpd)->unit_descriptor)
 	const struct xops *xops;
 	xpd_type_t type;
 	const char *type_name;

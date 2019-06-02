@@ -66,6 +66,11 @@
 /* Grab fasthdlc with tables */
 #define FAST_HDLC_NEED_TABLES
 #include <dahdi/kernel.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/signal.h>
+#endif /* 4.11.0 */
+
 #include "ecdis.h"
 #include "dahdi.h"
 
@@ -10079,7 +10084,13 @@ static inline unsigned long msecs_processed(const struct core_timer *const ct)
 	return atomic_read(&ct->count) * DAHDI_MSECS_PER_CHUNK;
 }
 
-static void coretimer_func(unsigned long param)
+static void coretimer_func(
+#ifdef init_timer	/* Compatibility for pre 4.15 interface */
+		unsigned long param
+#else
+		struct timer_list *t
+#endif
+)
 {
 	unsigned long flags;
 	unsigned long ms_since_start;
@@ -10160,8 +10171,7 @@ static void coretimer_func(unsigned long param)
 
 static void coretimer_init(void)
 {
-	init_timer(&core_timer.timer);
-	core_timer.timer.function = coretimer_func;
+	timer_setup(&core_timer.timer, coretimer_func, 0);
 	ktime_get_ts(&core_timer.start_interval);
 	atomic_set(&core_timer.count, 0);
 	atomic_set(&core_timer.shutdown, 0);

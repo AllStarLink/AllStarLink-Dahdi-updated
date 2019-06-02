@@ -46,6 +46,10 @@
 #include <stdbool.h>
 #include <dahdi/kernel.h>
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/signal.h>
+#endif /* 4.11.0 */
+
 #include "wct4xxp/wct4xxp.h"	/* For certain definitions */
 #include "wcxb.h"
 #include "wcxb_spi.h"
@@ -3199,9 +3203,15 @@ static void t43x_handle_interrupt(struct wcxb *xb, u32 pending)
 		wc->intr_span = 0;
 }
 
+#ifndef init_timer
+static void t43x_timer(struct timer_list *t)
+{
+	struct t43x *wc = from_timer(wc, t, timer);
+#else	/* Compatibility for pre 4.15 interface */
 static void t43x_timer(unsigned long data)
 {
 	struct t43x *wc = (struct t43x *)data;
+#endif
 
 	if (!is_initialized(wc))
 		return;
@@ -3427,7 +3437,7 @@ static int __devinit t43x_init_one(struct pci_dev *pdev,
 		goto fail_exit;
 
 	mutex_init(&wc->lock);
-	setup_timer(&wc->timer, t43x_timer, (unsigned long)wc);
+	timer_setup(&wc->timer, t43x_timer, 0);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 20)
 	INIT_WORK(&wc->timer_work, timer_work_func, wc);

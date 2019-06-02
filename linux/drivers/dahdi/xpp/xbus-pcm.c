@@ -353,36 +353,6 @@ static void xpp_set_syncer(xbus_t *xbus, bool on)
 			 (syncer) ? syncer->busname : "NO-SYNC");
 }
 
-static void xbus_command_timer(unsigned long param)
-{
-	xbus_t *xbus = (xbus_t *)param;
-	struct timeval now;
-
-	BUG_ON(!xbus);
-	do_gettimeofday(&now);
-	xbus_command_queue_tick(xbus);
-	if (!xbus->self_ticking) /* Must be 1KHz rate */
-		mod_timer(&xbus->command_timer, jiffies + 1);
-}
-
-void xbus_set_command_timer(xbus_t *xbus, bool on)
-{
-	XBUS_DBG(SYNC, xbus, "%s\n", (on) ? "ON" : "OFF");
-	if (on) {
-		if (!timer_pending(&xbus->command_timer)) {
-			XBUS_DBG(SYNC, xbus, "add_timer\n");
-			xbus->command_timer.function = xbus_command_timer;
-			xbus->command_timer.data = (unsigned long)xbus;
-			xbus->command_timer.expires = jiffies + 1;
-			add_timer(&xbus->command_timer);
-		}
-	} else if (timer_pending(&xbus->command_timer)) {
-		XBUS_DBG(SYNC, xbus, "del_timer\n");
-		del_timer(&xbus->command_timer);
-	}
-	xbus->self_ticking = !on;
-}
-
 /*
  * Called when the Astribank replies to a sync change request
  */
