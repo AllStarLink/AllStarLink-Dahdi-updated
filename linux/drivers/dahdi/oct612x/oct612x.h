@@ -24,6 +24,8 @@
 
 #include <oct6100api/oct6100_api.h>
 
+void do_gettimeofday(struct timeval *tv);
+
 struct oct612x_context;
 
 /**

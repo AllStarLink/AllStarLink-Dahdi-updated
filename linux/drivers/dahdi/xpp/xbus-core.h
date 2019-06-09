@@ -36,6 +36,8 @@
 /* forward declarations */
 struct xbus_workqueue;
 
+void do_gettimeofday(struct timeval *tv);
+
 #ifdef	__KERNEL__
 
 struct xbus_ops {

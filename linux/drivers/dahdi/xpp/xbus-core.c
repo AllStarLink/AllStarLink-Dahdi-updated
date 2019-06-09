@@ -78,6 +78,14 @@ static DEFINE_SPINLOCK(xbuses_lock);
 static struct proc_dir_entry *proc_xbuses;
 #endif
 
+void do_gettimeofday(struct timeval *tv)
+{
+struct timespec64 ts;
+ktime_get_real_ts64(&ts);
+tv->tv_sec = ts.tv_sec;
+tv->tv_usec = ts.tv_nsec/1000;
+}
+
 static struct xbus_desc {
 	xbus_t *xbus;
 	int shutting_down;

@@ -27,6 +27,14 @@
 
 #include "oct612x.h"
 
+void do_gettimeofday(struct timeval *tv)
+{
+struct timespec64 ts;
+ktime_get_real_ts64(&ts);
+tv->tv_sec = ts.tv_sec;
+tv->tv_usec = ts.tv_nsec/1000;
+}
+
 UINT32 Oct6100UserGetTime(tPOCT6100_GET_TIME f_pTime)
 {
 	/* Why couldn't they just take a timeval like everyone else? */
